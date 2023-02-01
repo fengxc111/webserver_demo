@@ -14,6 +14,7 @@
 #include <errno.h>
 #include <map>
 #include <sys/stat.h>
+#include <fcntl.h>
 
 #include "../lock/locker.h"
 #include "../CGImysql/sql_connection_pool.h"
@@ -25,7 +26,7 @@ public:
     static const int WRITE_BUFFER_SIZE = 1024;
     enum METHOD {GET = 0, HEAD, POST, OPTIONS, PUT, DELETE, TRACE, CONNECT};
     enum CHECK_STATE {CHECK_STATE_REQUESTLINE = 0, CHECK_STATE_HEADER, CHECK_STATE_CONTENT};
-    enum HTTP_CODE {NO_REQUEST, GET_REQUEST, BAD_REQUEST, NO_RESOURCE, FORBIDDEN_REQUEST, FILE_REQUEST, INTERMAL_ERROR, CLOSED_CONNECTION};
+    enum HTTP_CODE {NO_REQUEST, GET_REQUEST, BAD_REQUEST, NO_RESOURCE, FORBIDDEN_REQUEST, FILE_REQUEST, INTERNAL_ERROR, CLOSED_CONNECTION};
     enum LINE_STATUS{LINE_OK = 0, LINE_BAD, LINE_OPEN};
 public:
     http_conn();
@@ -72,21 +73,21 @@ private:
 
     char m_read_buf[READ_BUFFER_SIZE];  // request message
     int m_read_idx;     // last index +1 in m_read_buf
-    int m_check_idx;    // reading index in m_read_buf
+    int m_checked_idx;    // reading index in m_read_buf
     int m_start_line;   // number of parsed char in m_read_buf 
 
     char m_write_buf[WRITE_BUFFER_SIZE];    // response message
     int m_write_idx;    // index in m_write_buf
 
     CHECK_STATE m_check_state;  // state of main state machine
-    METHOD m_methoe;            //
+    METHOD m_method;            //
 
     char m_real_file[FILENAME_LEN];
     char *m_url;
     char *m_version;
     char *m_host;
     int m_content_length;
-    bool m_linger;
+    bool m_linger;      // flag for persistent connection
 
     char *m_file_address;
     struct stat m_flie_stat;
