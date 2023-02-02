@@ -296,3 +296,51 @@ http_conn::HTTP_CODE http_conn::parse_content(char *text){
     }
     return NO_REQUEST;
 }
+
+const char* doc_root = "./webserver/root";
+http_conn::HTTP_CODE http_conn::do_request(){
+    strcpy(m_real_file, doc_root);
+    int len = strlen(doc_root);
+
+    const char *p = strrchr(m_url, '/');
+    if (cgi == 1 && (*(p+1) == '2' || *(p+1) == '3')){
+        // login or register
+        // synchronize thread login verification
+        // CGI muti-process login verification
+    }
+
+    // /0, jump register interface
+    if (*(p+1) == '0'){
+        char *m_url_real = (char *)malloc(sizeof(char) * 200);
+        strcpy(m_url_real, "/register.html");
+
+        strncpy(m_real_file + len, m_url_real, strlen(m_url_real));
+        free(m_url_real);
+    }else if (*(p+1) == '1'){
+    // /1, jump login interface
+        char *m_url_real = (char *)malloc(sizeof(char) * 200);
+        strcpy(m_url_real, "/login.html");
+
+        strncpy(m_real_file + len, m_url_real, strlen(m_url_real));
+        free(m_url_real);
+    }else{
+        strncpy(m_real_file + len, m_url, FILENAME_LEN - len - 1);
+    }
+
+    // resource don't exist
+    if (stat(m_real_file, &m_file_stat) < 0)
+        return NO_RESOURCE;
+    // resource not readable
+    if (!(m_file_stat.st_mode & S_IROTH))
+        return FORBIDDEN_REQUEST;
+    // resource type
+    if (S_ISDIR(m_file_stat.st_mode))
+        return BAD_REQUEST;
+    
+    int fd = open(m_real_file, O_RDONLY);
+    m_file_address = (char*)mmap(0, m_file_stat.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+
+    close(fd);
+
+    return FILE_REQUEST;
+}

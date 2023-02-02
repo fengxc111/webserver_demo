@@ -12,8 +12,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
-#include <map>
+#include <sys/mman.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <fcntl.h>
 
 #include "../lock/locker.h"
@@ -27,6 +28,41 @@ public:
     enum METHOD {GET = 0, HEAD, POST, OPTIONS, PUT, DELETE, TRACE, CONNECT};
     enum CHECK_STATE {CHECK_STATE_REQUESTLINE = 0, CHECK_STATE_HEADER, CHECK_STATE_CONTENT};
     enum HTTP_CODE {NO_REQUEST, GET_REQUEST, BAD_REQUEST, NO_RESOURCE, FORBIDDEN_REQUEST, FILE_REQUEST, INTERNAL_ERROR, CLOSED_CONNECTION};
+    /**
+     * NO_REQUEST
+     * 请求不完整，需要继续读取请求报文数据
+
+     * 跳转主线程继续监测读事件
+
+     * GET_REQUEST
+     * 获得了完整的HTTP请求
+
+     * 调用do_request完成请求资源映射
+
+     * NO_RESOURCE
+     * 请求资源不存在
+
+     * 跳转process_write完成响应报文
+
+     * BAD_REQUEST
+     * HTTP请求报文有语法错误或请求资源为目录
+
+     * 跳转process_write完成响应报文
+
+     * FORBIDDEN_REQUEST
+     * 请求资源禁止访问，没有读取权限
+
+     * 跳转process_write完成响应报文
+
+     * FILE_REQUEST
+     * 请求资源可以正常访问
+
+     * 跳转process_write完成响应报文
+
+     * INTERNAL_ERROR
+     * 服务器内部错误，该结果在主状态机逻辑switch的default下，一般不会触发
+    **/
+
     enum LINE_STATUS{LINE_OK = 0, LINE_BAD, LINE_OPEN};
 public:
     http_conn();
@@ -90,7 +126,7 @@ private:
     bool m_linger;      // flag for persistent connection
 
     char *m_file_address;
-    struct stat m_flie_stat;
+    struct stat m_file_stat;
     struct iovec m_iv[2];
     int m_iv_count;
     int cgi;
